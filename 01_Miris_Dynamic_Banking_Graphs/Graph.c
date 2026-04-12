@@ -62,24 +62,28 @@ void destroyMapNodes(Pointer value){
 //Function that tells the GraphNode list how to destroy each node
 void destroyGraphListNode(Pointer nodeToDelete){
     GraphNode node = nodeToDelete;
-    //We must delete all incoming edges and also remove them from
-    //the outgoing lists of their origin nodes.
-    //Example: if we delete node 3 and there is edge 5->3,
-    //we must remove that edge from 3's incoming list and 5's outgoing list.
-    //Likewise for all outgoing edges and destination incoming lists.
 
-    //This shows the value of generic implementation:
-    //we just call list destroy, and while deleting each node,
-    //each edge calls destroyEdge which does exactly what is described below.
-
+    // fixed , we don't dostroy the 2 lists because when an edge is destroyd from an edge list,
+    // it is also removed from the other list, so we would have double free if we destroy both lists here.
+    while (listSize(node->outgoingEdges) > 0) {
+        Edge e = listNodeValue(listGetFirst(node->outgoingEdges));
+        destroyEdge(e); 
+    }
+    while (listSize(node->incomingEdges) > 0) {
+        Edge e = listNodeValue(listGetFirst(node->incomingEdges));
+        destroyEdge(e);
+    }
+    
+    // lists are now empty, we can destroy them
+    listSetDestroyValue(node->incomingEdges, NULL);
+    listSetDestroyValue(node->outgoingEdges, NULL);
+    
     listDestroy(node->incomingEdges);
     listDestroy(node->outgoingEdges);
-    
     
     free(node->id);
     free(node);
 }
-
 
 //When we want to remove an edge:
 void destroyEdge(Pointer edgeToDelete){
@@ -209,14 +213,13 @@ Edge findEdge(char* id1,char* id2, Map map){
     temp->nodeDestination = node2;
     temp->nodeOrigin = node1;
 
-    if(listFind(node1->outgoingEdges, temp) == NULL){
-        free (temp);
-        printf("------------");
+    // fixed: we search one time for the edge in node1 outgoing list
+    ListNode foundNode = listFind(node1->outgoingEdges, temp);
+    free(temp);
+    if(foundNode == NULL){
         return NULL;
-    }
-    else{
-        free (temp);
-        return listNodeValue(listFind(node1->outgoingEdges, temp));
+    } else {
+        return listNodeValue(foundNode);
     }
 }
 
@@ -394,14 +397,11 @@ void findPath(Graph graph, char* id1, char* id2, Map map){
     GraphNode node1 = mapFind(map, id1);
 
     List list = listCreate(NULL, compareGraphNodes);
-    bool* found;
-    found = malloc(sizeof(bool));
-    *found = false;
-    dfsPath(node1, id2, list, map, found);
-    if(!(*found)){
+    bool found = false;
+    dfsPath(node1, id2, list, map, &found);
+    if(!found){
         printf("   No path found\n");
     }
-    free(found);
     listDestroy(list);
     
 }

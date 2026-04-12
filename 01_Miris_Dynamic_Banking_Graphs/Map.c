@@ -52,13 +52,11 @@ void mapInsert(Map map, char* key, Pointer value) {
 
 
 void mapRemove(Map map, char* key) {
-	MapNode node = mapFindNode(map, key);
-	if (node == NULL){
-		return;
-	}
-	else{
-		listDeleteNode(map->arrayOfBuckets[hashFunction(key) % map->capacity], node);
-	}
+    int pos = hashFunction(key) % map->capacity;
+    if (map->arrayOfBuckets[pos] == NULL) {
+        return;
+    }
+    listDeleteNode(map->arrayOfBuckets[pos], key);
 }
 
 Pointer mapFind(Map map, char* key) {

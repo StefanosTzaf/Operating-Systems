@@ -122,14 +122,10 @@ void listDestroy(List list) {
 		ListNode next = node->next;
 		//Destroy each node value based on destroyValue function
 		//(Pointer may reference different data types, so freeing differs each time to avoid leaks)
-		list->destroyValue(node->value);
-		node = next;
-	}
-
-	//Free memory reserved for nodes
-	node = list->head;
-	while (node != NULL) {
-		ListNode next = node->next;
+		if(list->destroyValue != NULL){
+			list->destroyValue(node->value);
+		}
+		// free memory reserved for the node itself
 		free(node);
 		node = next;
 	}

@@ -9,3 +9,4 @@
 !.gitignore
 !.vscode/*.json
 !*.jpeg
+!*.txt

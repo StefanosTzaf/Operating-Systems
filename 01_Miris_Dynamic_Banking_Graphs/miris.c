@@ -1,9 +1,29 @@
 #include "Graph.h"
 #include <getopt.h>
 #include <stdbool.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+// Συνάρτηση για την εκτύπωση του Μενού Επιλογών
+void printMenu() {
+    printf("\n============================= MIRIS COMMAND MENU =============================\n");
+    printf(" i  / insert Ni [Nj Nk ...]           : Insert one or more nodes\n");
+    printf(" n  / insert2 Ni Nj amount date       : Insert a transaction (edge)\n");
+    printf(" d  / delete Ni [Nj Nk ...]           : Delete one or more nodes\n");
+    printf(" l  / delete2 Ni Nj                   : Delete an edge between Ni and Nj\n");
+    printf(" m  / modify Ni Nj sum sum1 date date1: Modify an existing edge\n");
+    printf(" f  / find Ni                         : Find all outgoing edges from Ni\n");
+    printf(" r  / receiving Ni                    : Find all incoming edges to Ni\n");
+    printf(" c  / circlefind Ni                   : Find all simple cycles containing Ni\n");
+    printf(" fi / findcircles Ni k                : Find cycles containing Ni with min amount k\n");
+    printf(" o  / connected Ni Nj                 : Find if a path exists from Ni to Nj\n");
+    printf(" h  / help                            : Print this menu again\n");
+    printf(" e  / exit                            : Save to file and exit the program\n");
+    printf("==============================================================================\n\n");
+}
 
 int main(int argc, char *argv[]){
-
 
   int option;
 
@@ -64,11 +84,12 @@ int main(int argc, char *argv[]){
 
 
 //-----------------------------------------------------prompt---------------------------------------------------------
+  printMenu();
 
   char* token;
   bool exit = false; 
   do{
-    printf("Miris waiting for a command :\n");
+    printf("Miris waiting for a command :\n> ");
     //Read with getchar because we do not know user input length
     //for example, user may type many nodes for insert
     char ch;
@@ -100,6 +121,11 @@ int main(int argc, char *argv[]){
 
     token = strtok(command, " ");
 
+    if (token == NULL) {
+      free(command);
+      free(commandCopy);
+      continue;
+    }
 
     //--------------------------------------------------------------- 1 -------------------------------------------------------
     if(strcmp(token, "i") == 0 || strcmp(token, "insert") == 0){
@@ -107,8 +133,8 @@ int main(int argc, char *argv[]){
       token = strtok(NULL, " ");
       //if first argument after insert is NULL, format is invalid
       if(token == NULL){
-        printf("   Format error:\n");
-        printf("   Command Name : i Ni [Nj Nk ...] or insert Ni [Nj Nk ...]\n\n");
+        printf("   [Error] Invalid format.\n");
+        printf("   Usage : i Ni [Nj Nk ...] or insert Ni [Nj Nk ...]\n\n");
         free(command);
         free(commandCopy);
         continue;
@@ -118,7 +144,7 @@ int main(int argc, char *argv[]){
       bool exists = false;
       while(token != NULL){
         if(mapFind(map, token) != NULL){
-          printf("   IssueWith: %s (already exists)\n", token);
+          printf("   [Warning] Node %s already exists in the graph.\n", token);
           exists = true;
           break;
         }
@@ -131,19 +157,14 @@ int main(int argc, char *argv[]){
         continue;
       }
 
-      //skip command token i (we use command copy to ensure content
-      //matches original command and traverse string from start safely)
-
-      printf("   Insert into the graph structure 1 or more nodes\n   with specific STRING ids.\n\n");
       token = strtok(commandCopy, " ");
       token = strtok(NULL, " ");
 
-      printf("   Succ: ");
+      printf("   [Success] Inserted node(s):");
       while(token != NULL){
         printf(" %s", token);
         graphAddNode(graph, token, map);
         token = strtok(NULL, " ");
-
       }
       printf("\n\n");
       
@@ -156,19 +177,18 @@ int main(int argc, char *argv[]){
       char* token2 = strtok(NULL, " ");
       char* sum = strtok(NULL, " ");
       char* date = strtok(NULL, " ");
-      //there should be nothing after date
       char* next = strtok(NULL, " ");
 
       if(token == NULL || token2 == NULL || sum == NULL || date == NULL || next != NULL){
-        printf("   Format error:\n");
-        printf("   Command Name : n Ni Nj amount date or insert2 n Ni Nj sum date\n\n");
+        printf("   [Error] Invalid format.\n");
+        printf("   Usage : n Ni Nj amount date\n\n");
       }
       else if(strcmp(token, token2) == 0){
-        printf("   Transaction with the same origin and destination not allowed\n\n");
+        printf("   [Error] Transaction with the same origin and destination is not allowed.\n\n");
       }
       else{
-        printf("   introduce an edge with direction from %s to %s with label\n   %s + %s if either %s or %s does not exist in the graph,\n   do the appropriate node insertion first.\n\n", token, token2, sum, date, token, token2);
         addEdge(graph, date, atoi(sum), token, token2, map);
+        printf("   [Success] Transaction added: %s -> %s (Amount: %s, Date: %s)\n\n", token, token2, sum, date);
       }
     }
 
@@ -176,21 +196,20 @@ int main(int argc, char *argv[]){
     //--------------------------------------------------------------- 3 --------------------------------------------------------
     else if(strcmp(token,"d") == 0 || strcmp(token, "delete") == 0){
       token = strtok(NULL, " ");
-      //if first argument after delete is NULL, format is invalid
+      
       if(token == NULL){
-        printf("   Format error:\n");
-        printf("   Command Name : d Ni [Nj Nk ...] or delete Ni [Nj Nk ...]\n\n");
+        printf("   [Error] Invalid format.\n");
+        printf("   Usage : d Ni [Nj Nk ...]\n\n");
         free(command);
         free(commandCopy);
         continue;
       }
-      printf("   delete from graph listed nodes Ni, Nj, Nk, etc\n\n");
 
       //check whether every node id exists
       bool exists = false;
       while(token != NULL){
         if(mapFind(map, token) == NULL){
-          printf("   IssueWith: %s (no exists)\n", token);
+          printf("   [Warning] Node %s does not exist in the graph.\n", token);
           exists = true;
           break;
         }
@@ -203,14 +222,14 @@ int main(int argc, char *argv[]){
         continue;
       }
 
-      //same idea as insert
       token = strtok(commandCopy, " ");
       token = strtok(NULL, " ");
 
+      printf("   [Success] Deleted node(s):");
       while(token != NULL){
+        printf(" %s", token);
         removeGraphNode(token, map, graph);
         token = strtok(NULL, " ");
-
       }
       printf("\n\n");
 
@@ -221,21 +240,18 @@ int main(int argc, char *argv[]){
 
       token = strtok(NULL, " ");
       char* token2 = strtok(NULL, " ");
-      //there should be nothing after second argument
       char* next = strtok(NULL, " ");
 
       if(next != NULL || token == NULL || token2 == NULL){
-        printf("   Format error:\n");
-        printf("   Command Name : l Ni Nj or delete2 Ni Nj\n\n");
+        printf("   [Error] Invalid format.\n");
+        printf("   Usage : l Ni Nj\n\n");
       }
-
       else if(findEdge(token, token2, map) == NULL){
-        printf("   Edge between %s - %s not found\n\n", token, token2);
+        printf("   [Warning] Edge between %s and %s not found.\n\n", token, token2);
       }
-
       else{
-        printf("   remove the edge between %s and %s; if there are\n   more than one edges, remove one of the edges.\n\n", token, token2);
         removeEdge(token, token2, map);
+        printf("   [Success] Transaction between %s and %s has been deleted.\n\n", token, token2);
       }
     }
 
@@ -251,14 +267,14 @@ int main(int argc, char *argv[]){
       char* next = strtok(NULL, " ");
 
       if(id1 == NULL || id2 == NULL || sum == NULL || sum2 == NULL || date2 == NULL || date == NULL || next != NULL){
-        printf("   Format error:\n");
-        printf("   Command Name :m Ni Nj sum sum1 date date1 or modify Ni Nj sum sum1 date date1\n\n");
+        printf("   [Error] Invalid format.\n");
+        printf("   Usage : m Ni Nj old_sum new_sum old_date new_date\n\n");
       }
       else if(modifyEdge(id1, id2, date, atoi(sum), date2, atoi(sum2), map) == 1){
-        printf("   Non-existing edge:\n\n" );
+        printf("   [Warning] The specified transaction was not found.\n\n" );
       }
       else{
-        printf("   update the values of a specific edge between %s and %s\n\n", id1, id2);
+        printf("   [Success] Transaction between %s and %s modified successfully.\n\n", id1, id2);
       }
     }
 
@@ -269,19 +285,17 @@ int main(int argc, char *argv[]){
       char* next = strtok(NULL, " ");
 
       if(token == NULL || next != NULL){
-        printf("   Format error:\n");
-        printf("   Command Name : f Ni or find Ni\n\n");
+        printf("   [Error] Invalid format.\n");
+        printf("   Usage : f Ni\n\n");
       }
-
       else if(mapFind(map, token) == NULL){
-        printf("   Non-existing node %s \n\n", token);
+        printf("   [Warning] Node %s does not exist.\n\n", token);
       }
-
       else{
-        printf("   find all outgoing edges from %s\n\n", token);
+        printf("   [Result] Outgoing transactions from %s:\n", token);
         displayOutgoingEdges(token, map);
+        printf("\n");
       }
-
     }
 
     //--------------------------------------------------------------- 7 --------------------------------------------------------
@@ -291,17 +305,16 @@ int main(int argc, char *argv[]){
       char* next = strtok(NULL, " ");
 
       if(token == NULL || next != NULL){
-        printf("   Format error:\n");
-        printf("   Command Name : r Ni or receiving Ni\n\n");
+        printf("   [Error] Invalid format.\n");
+        printf("   Usage : r Ni\n\n");
       }
-
       else if(mapFind(map, token) == NULL){
-        printf("   Non-existing node %s \n\n", token);
+        printf("   [Warning] Node %s does not exist.\n\n", token);
       }
-
       else{
-        printf("   find all ingoing edges from %s\n\n", token);
+        printf("   [Result] Incoming transactions to %s:\n", token);
         displayIncomingEdges(token, map);
+        printf("\n");
       }      
     }
 
@@ -311,19 +324,15 @@ int main(int argc, char *argv[]){
       char* next = strtok(NULL, " ");
 
       if(token == NULL || next != NULL){
-        printf("   Format error:\n");
-        printf("   Command Name : c Ni or circlefind Ni\n\n");
+        printf("   [Error] Invalid format.\n");
+        printf("   Usage : c Ni\n\n");
       }
-
       else if(mapFind(map, token) == NULL){
-        printf("   Non-existing node %s \n\n", token);
+        printf("   [Warning] Node %s does not exist.\n\n", token);
       }
-
       else{
-        printf("   find all circles that contain node %s\n\n", token);
-        //Simple cycles without minimum amount
+        printf("   [Result] Simple cycles involving node %s:\n", token);
         findCircles(token, graph, map, 0, 0);
-        
       }
     }
 
@@ -335,16 +344,14 @@ int main(int argc, char *argv[]){
       char* next = strtok(NULL, " ");
 
       if(token == NULL || sum == NULL || next != NULL){
-        printf("   Format error:\n");
-        printf("   Command Name : c Ni k or circlefind Ni k\n\n");
+        printf("   [Error] Invalid format.\n");
+        printf("   Usage : fi Ni min_amount\n\n");
       }
-
       else if(mapFind(map, token) == NULL){
-        printf("   Non-existing node %s \n\n", token);
+        printf("   [Warning] Node %s does not exist.\n\n", token);
       }
-
       else{
-        printf("   find circular relationships in which %s is involved and moves at least k units of funds.\n", token);
+        printf("   [Result] Cycles involving %s with amount >= %s:\n", token, sum);
         findCircles(token, graph, map, atoi(sum), 1);
       }
     }
@@ -357,31 +364,34 @@ int main(int argc, char *argv[]){
       char* next = strtok(NULL, " ");
 
       if(token == NULL || id2 == NULL || next != NULL){
-        printf("   Format error:\n");
-        printf("   Command Name : o Ni Nj or connected Ni Nj\n\n");
+        printf("   [Error] Invalid format.\n");
+        printf("   Usage : o Ni Nj\n\n");
       }
-
       else if(mapFind(map, token) == NULL){
-        printf("   Non-existing node %s \n\n", token);
+        printf("   [Warning] Node %s does not exist.\n\n", token);
       }
-
       else if(mapFind(map, id2) == NULL){
-        printf("   Non-existing node %s \n\n", id2);
+        printf("   [Warning] Node %s does not exist.\n\n", id2);
       }
-
       else{
+        printf("   [Result] Path from %s to %s:\n", token, id2);
         findPath(graph, token, id2, map);
       }
     }
 
+    //--------------------------------------------------------------- HELP ------------------------------------------------------
+    else if(strcmp(token, "h") == 0 || strcmp(token, "help") == 0){
+      printMenu();
+    }
 
     //--------------------------------------------------------------- 12 --------------------------------------------------------
     else if(strcmp(token, "e") == 0 || strcmp(token, "exit") == 0){
-      printf("terminate the program.\n");
+      printf("   [Info] Saving data and terminating the program. Goodbye!\n");
       exit = true;
     }
     else{
-      printf("Unrecognized command: %s\n",token);
+      printf("   [Error] Unrecognized command: %s\n", token);
+      printf("   Type 'h' or 'help' to see the available commands.\n\n");
     }
 
     free(command);
