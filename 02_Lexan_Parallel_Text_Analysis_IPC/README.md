@@ -1,50 +1,53 @@
-Files and organization (Modularity):
+# Lexan: Parallel Lexical Analyzer
 
-First of all there are 3 different source code files that represent three different type of processes :
-1) lexan -root.c source file- process (creating the other processes and pipes and introducing the results ).
-2) splitter process (seperating the words from the lines that are responsible for and send them to a builder via pipes)
-3) builder process (keeping words' occurenceCounter counter in hash tables and send them to the root, when they will not have anything to read)
+## 🎯 Project Objective
+The goal of this project is to implement a highly parallelized Lexical Analyzer using a multi-process architecture in C. The system reads a large text file, tokenizes it into words, calculates the absolute and relative frequency of each word, and outputs the "Top-K" most frequent words. 
 
-For every type of process a source code "utils" file has been made , that includes help functions for each process respectively. 
+To achieve high performance, the workload is distributed across a 3-tier process hierarchy: a **Root** process, multiple **Splitters**, and multiple **Builders**. The project heavily utilizes Inter-Process Communication (IPC) via unnamed pipes, process creation (`fork`, `exec`), signal handling (`SIGUSR1`, `SIGUSR2`), and custom data structures (Hash Maps and Binary Search Trees) to efficiently aggregate and sort massive amounts of text data.
 
+---
 
-Functions :
+## 🏗️ Files and Modularity
 
-Lexan :
-    Begining with the lexan process and its root.c source code file, after analyzing the options given
-from the user in command line it counts the lines of the file to calculate how many lines each splitter
-has to process. The last splitter may get a bit more lines due to the non imperfect division, also it 
-calculates the exact byte that each splitter should start reading - otherwise each splitter should read 
-the file from its start and in this way the task will be repeated many times. Then , it creates n pipes 
-between builders and splitters (n the number of builders) and one pipe for builders - root.
-    After that it creates with fork , the processes for builders and splitters and call exec* syscall in
-the child process after ensuring that all useless file descriptors are closed. Also it closes in the parent
-proscess the useless file descritors and then it starts reading from the readend of pipe that builders write.
-Then it waits until every process terminates properly and presents the results. Using a set to keep the results
-coming from builders not only do they ensure that the results would be sorted , so the printing process would be 
-easier (via a setLast and a setPrevious function see Set.c) but also root does not have to wait until all the
-builders end to start sorting the data , it can do it concurrently. We are sure that root will read every byte that
-builders print to pipe because read as a blocking syscall will return 0 only when all writeEnds of the pipe are 
-closed (so the builders would have finished). A the end it writes the results (words frequency and occurenceCounter)
-in output file , after calculating the frequency of each "interesting" word (freq = WordOccurenceCounter / TotalNumberOfInterestingWordsInText)
+The codebase is highly modular. The system is divided into three distinct executable programs representing the three types of processes in our hierarchy. For every core process, there is a dedicated `utils` file containing its specific helper functions.
 
-Splitter :
-    After being called from root , and analyzing the arguements passing from exec* , it starts reading from 
-the file. It seperates the words if it finds whitespace or punctional character. Numbers are not taking
-into account. One letter words -- like s or t coming from isn't and Bob's -- are excluded as well as
-the words into the exclusion hash table (for o(1) search). Also capital and lowercase letter are considered
-the same, for example word and WoRd are the same words at all.  
+* **`root.c` / `lexan`:** The main orchestrator process. Creates pipes, spawns children, aggregates final results, and handles user input.
+* **`splitter.c`:** Responsible for reading a specific chunk of the input file, parsing words, and distributing them to the Builders.
+* **`builder.c`:** Responsible for receiving words via pipes, counting their occurrences using a Hash Table, and sending the aggregated data back to the Root.
 
-Builders : 
-    They read from their pipes and storing the words in a hash table(its size calculated by the approximation
-of the words that each builder will store (multiplying by 2 in the map create function to keep loading factor low)
-it will read). If a word is found more than once its occurenceCounter is increased. After finishing reading , builder
-starts writing data into a pipe with the root in a format that root will be able to distinguish occurenceCounters and words.
+---
 
+## ⚙️ Process Roles & Workflow
 
-    Also, for signals i have define two global variables to count the count of received signals and i have define
-the handler functions in rootUtils.c. In root i have used the struct sigaction sa1, to define the signals'
-behavior (for example read and write not to being stopped by signal).
+### 1. Lexan (Root Process)
+The Root process initializes the environment and orchestrates the workflow:
+* **Workload Division:** Parses command-line arguments and scans the input file to count the total lines. It divides the lines equally among the Splitters (handling imperfect divisions by assigning remaining lines to the last Splitter).
+* **Offset Calculation:** It calculates the exact byte offset where each Splitter should start reading. This ensures Splitters use `lseek` to jump directly to their assigned chunk, preventing redundant file reads.
+* **IPC Setup:** Creates $N$ pipes between Splitters and Builders (where $N$ is the number of Builders) and a single shared pipe for Builders to send data back to the Root.
+* **Execution:** Forks and executes (`exec*`) the Splitters and Builders. It strictly closes all unused file descriptors in both parent and child processes to prevent deadlocks.
+* **Concurrent Aggregation:** As Builders finish and write to the final pipe, the Root reads the data and inserts it into a **Set (implemented as a Binary Search Tree)**. This allows the Root to sort the data concurrently while Builders are still working.
+* **Output:** Once the `read()` syscall unblocks (indicating all Builder write-ends are closed), the Root uses `setLast` and `nodeFindPrevious` to effortlessly print the Top-K words and their relative frequencies to the output file.
 
-At the end i calculate the real and cpu time of root and i print them on command prompt (as well as signals received).
-Top-k words are printed in the output file given.
+### 2. Splitters
+Spawned by the Root, Splitters act as the text parsers:
+* **Targeted Reading:** Each Splitter jumps to its predefined byte offset and reads its assigned lines.
+* **Tokenization & Filtering:** Words are separated by whitespace or punctuation. Numbers are ignored. Single-letter tokens (e.g., the 's' or 't' from "Bob's" or "isn't") are dropped. Everything is converted to lowercase (e.g., "Word" and "WoRd" are treated as identical).
+* **Exclusion List:** Words are checked against an Exclusion Hash Table in $O(1)$ time. If a word is on the exclusion list, it is dropped.
+* **Routing:** Valid words are hashed, and based on the modulo of the hash, sent to a specific Builder via the corresponding pipe.
+
+### 3. Builders
+Builders act as the aggregators:
+* **Local Counting:** They continuously read words from their incoming pipes and store them in a local Hash Table. (The Hash Table's capacity is dynamically initialized based on an approximation of the expected word count, multiplied by 2 to keep the load factor low and prevent collisions).
+* **Aggregation:** If a word arrives for the first time, it is inserted with an occurrence counter of 1. If it already exists, its counter is simply incremented.
+* **Flushing:** Once all Splitters close their pipes, the `read()` call in the Builder returns 0. The Builder then iterates through its Hash Table and writes the aggregated data (Word + Occurrence Counter) to the Root pipe using a specific string format.
+
+---
+
+## 📡 Signals & IPC Safety
+* **Signal Handling:** Two global variables are defined to track the number of received `SIGUSR1` (from Splitters) and `SIGUSR2` (from Builders) signals. The handler functions are defined in `rootUtils.c`.
+* **Syscall Interruption Safety:** The `struct sigaction` is used with the `SA_RESTART` flag. This ensures that blocking system calls (like `read` or `wait`) are automatically restarted if interrupted by an incoming signal, preventing premature failures.
+
+## ⏱️ Performance Metrics
+Upon successful execution, the Root process calculates and prints to the standard output:
+1. The total number of `SIGUSR1` and `SIGUSR2` signals received.
+2. The **Real Time** (wall-clock time) vs. the **CPU Time** utilized by the program, demonstrating the efficiency and overhead of the parallelized architecture.

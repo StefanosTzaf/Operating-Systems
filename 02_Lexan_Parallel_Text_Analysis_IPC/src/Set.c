@@ -49,7 +49,9 @@ SetNode setInsertNode(Set set, Pointer value, SetNode subtreeRoot) {
 		int compareValue = set->compare(value, subtreeRoot->value);
 		//if the value is already in the set(based to the compare function) DO NOT ADD it again 
 		if(compareValue == 0) {
-			//do nothing
+			if(set->destroyValue != NULL) {
+            	set->destroyValue(value);
+        	}
 		}
 		else if(compareValue < 0) {
 			subtreeRoot->left = setInsertNode(set, value , subtreeRoot->left);

@@ -95,7 +95,7 @@ int main(int argc, char* argv[]){
                     int hash = splitterHashFunction(word, numberOfBuilders);
                     if(mapFind(exclusionMap, word) == NULL){
                         word[size] = '-';
-                        write(writeEndFds[hash], word, strlen(word));
+                        write(writeEndFds[hash], word, size + 1);
                     }
                 }
 
@@ -109,7 +109,7 @@ int main(int argc, char* argv[]){
                     int hash = splitterHashFunction(word, numberOfBuilders);
                     if(mapFind(exclusionMap, word) == NULL){
                         word[size] = '-';
-                        write(writeEndFds[hash], word, strlen(word));
+                        write(writeEndFds[hash], word, size + 1);
                     }
                 }
                 memset(word, '\0', capacity);

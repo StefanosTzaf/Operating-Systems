@@ -169,7 +169,7 @@ void printingTopK(Set set, int k, char* outputFile, char* inputFile){
 		write(fd, ",  ", 3);
 
 		float frequency = ((float)wordInRoot->occurenceCounter / totalWords )* 100;
-		char frequencyStr[10];
+		char frequencyStr[32];
 		sprintf(frequencyStr, "%.6f", frequency);
 		write(fd, frequencyStr, strlen(frequencyStr));
 		write(fd, "%,  ", 4);

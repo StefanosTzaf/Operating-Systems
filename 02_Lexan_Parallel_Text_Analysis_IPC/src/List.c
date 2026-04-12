@@ -122,18 +122,12 @@ void listDestroy(List list) {
 		ListNode next = node->next;
 		// destroy each node based on the destroyValue function
 		// (the Pointer may point to different data types so each time we must handle free differently to avoid leaks)
-		list->destroyValue(node->value);
-		node = next;
-	}
-
-	// Free the memory allocated for the nodes
-	node = list->head;
-	while (node != NULL) {
-		ListNode next = node->next;
+		if(list->destroyValue != NULL){
+			list->destroyValue(node->value);
+		}
 		free(node);
 		node = next;
 	}
-
 	// Free the memory allocated for the struct
 	free(list);
 }
