@@ -4,54 +4,54 @@ typedef struct graph_node* GraphNode;
 typedef struct edge* Edge;
 
 
-//------------------------------------------------------- Συναρτήσεις για τις λίστες ------------------------------------------
+//------------------------------------------------------- Functions for lists ------------------------------------------
 
-//Ο(1)
-//συναρτηση compare για την συγκριση των id των κομβων στην λιστα από κόμβους
+//O(1)
+//compare function for comparing node ids in the node list
 int compareGraphNodes(Pointer a, Pointer b);
-//Ο(1)
-//συνάρτηση compare για edge
+//O(1)
+//compare function for edges
 int compareEdges(Pointer a, Pointer b);
-//Ο(1)
-//συνάρτηση compare για την σύγκριση των id των κόμβων στο hash table
+//O(1)
+//compare function for comparing node ids in hash table
 int compareMapNodes(Pointer a, Pointer b);
 
-//O(n + m) κόμβοι της λίστας απο GraphNode και m οι ακμ΄ές 
-//καταστρέφει το value από κόμβους της λίστας του γράφου δηλαδή Graphnode
+//O(n + m), where n is GraphNode list nodes and m is edges
+//destroys value of nodes in graph list, i.e. GraphNode
 void destroyGraphListNode(Pointer nodeToDelete);
 
-//O(n) οπου n οι ακμές μια λιστας με edges
-//καταστρέφει το value απο τους κόμβους των λιστών από edge
+//O(n), where n is edges in an edge list
+//destroys value of nodes in edge lists
 void destroyEdge(Pointer edgeToDelete);
 
-//Ο(1)
-//καταστρέφει το value από τους κόμβους των λιστών hash table
+//O(1)
+//destroys value of nodes in hash table lists
 void destroyMapNodes(Pointer value);
 
 //---------------------------------------------------------------------------------------------------------------------------------
 
 
-//Ο(1)
+//O(1)
 Graph graphCreate();
 
-//Ο(1)
+//O(1)
 void graphAddNode(Graph graph, char* id, Map map);
 void addEdge(Graph graph, char* dateOfTransmission, int amount, char* id1, char* id2, Map map);
 
-//Ο(n + m) λογω της destroyGraphListNode
+//O(n + m) due to destroyGraphListNode
 void removeGraphNode(char* id, Map map, Graph graph);
 
-//Ο(n) λόγω της findEdge
+//O(n) due to findEdge
 void removeEdge(char* id1, char* id2, Map map);
 
-//βρίσκει ακμή βάση μόνο των id των κόμβων (χρειάζεται για την removeEdge)
-//Ο(n) n οι ακμές του κόμβου(outgoing)
+//finds edge based only on node ids (needed by removeEdge)
+//O(n), where n is number of outgoing edges of the node
 Edge findEdge(char* id1,char* id2, Map map);
 
 //O(n)
 bool modifyEdge(char* id1, char* id2, char* date, int amount,char* date2, int amount2, Map map);
 
-//O(n) n οι ακμές
+//O(n), where n is edges
 void displayOutgoingEdges(char* id, Map map);
 void displayIncomingEdges(char* id, Map map);
 
@@ -59,7 +59,7 @@ void displayIncomingEdges(char* id, Map map);
 void destroyGraph(Graph graph);
 void printToFile(Graph graph, FILE* file);
 
-//Ο(m + n) γνωστή πολυπλοκότητα dfs
+//O(m + n), known DFS complexity
 void findCircles(char* id,Graph graph, Map map, int minSum, bool flag);
 void dfsPrintingCircles(GraphNode node, GraphNode startNode, List list, int minSum);
 void findPath(Graph graph, char* id1, char* id2, Map map);

@@ -1,7 +1,7 @@
 #include "Graph.h"
 
-//------------------------------------------------------Ορισμός των δομών-------------------------------------------------------
-//Ο γράφος αποτελείται από μία λίστα από GraphNodes
+//------------------------------------------------------Structure definitions-------------------------------------------------------
+//The graph consists of a list of GraphNodes
 struct graph{
     List nodes;
     int size;
@@ -9,14 +9,15 @@ struct graph{
 
 struct graph_node{
     char* id;
-    //Λιστα απο edge η οποία έχει ακμές που ξεκιναν απο αυτόν τον κόμβο και καταλήγουν σε αλλον κόμβο
+    //List of edges that start from this node and end at another node
     List outgoingEdges;
-    //Λίστα από edge που έχουν ακμές που καταλήγουν σε αυτόν τον κόμβο
+    //List of edges that end at this node
     List incomingEdges;
     bool visited;
 };
 
-//μία ακμή αποτελείται από την ημερομηνία της συναλλαγής, το ποσό της συναλλαγής, δείκτες στον κόμβο προορισμού και αφετηρίας
+//An edge consists of the transaction date, transaction amount,
+//and pointers to destination and origin nodes
 struct edge{
     char* dateOfTransaction;
     int amount;
@@ -28,15 +29,15 @@ struct edge{
 
 
 
-//------------------------------------------------------Συναρτήσεις που θα δώσουμε στις λίστες---------------------------------------------------
-//τυπου compare function για την σύγριση των id των κόμβων
+//------------------------------------------------------Functions passed to lists---------------------------------------------------
+//Compare function for node id comparison
 int compareGraphNodes(Pointer a, Pointer b){
     char* id1 = ((GraphNode)a)->id;
     char* id2 = ((GraphNode)b)->id;
     return strcmp(id1, id2);
 }
 
-//συγκριση ακμών βάση των κόμβων που ξεκινάν και τελειώνουν 
+//Compare edges based on origin and destination nodes
 int compareEdges(Pointer a, Pointer b){
     Edge edge1 = a;
     Edge edge2 = b;
@@ -46,28 +47,30 @@ int compareEdges(Pointer a, Pointer b){
     return 1;
 }
 
-//συγκριση ενος Map node βαση του value του που είναι graphnode και ενος key που είναι id
+//Compare a Map node (whose value is a GraphNode) against a key (id)
 int compareMapNodes(Pointer a, Pointer b){
     GraphNode node =  mapNodeValue((MapNode)b);
     return strcmp((char*)a, node->id);
 }
 
-//απλά free τον Pointer ,το εσωτερικό του Graphnode το διαγράφει η destroyGraphListNode
+//Just free the pointer; GraphNode internals are freed by destroyGraphListNode
 void destroyMapNodes(Pointer value){
     free(value);
 }
 
 
-//Συνάρτηση που μας λέει στην λίστα απο Graphnode πως να καταστρέψει κάθε κομβο της
+//Function that tells the GraphNode list how to destroy each node
 void destroyGraphListNode(Pointer nodeToDelete){
     GraphNode node = nodeToDelete;
-    //Πρέπει να διαγράψουμε όλες τις incoming edges αλλα και απο τις λιστες outgoing edges της προελευσης
-    //πχ αν διαγράφουμε τον κομβο 3 και έχει μια ακμη 5->3 τότε πρέπει να διαγράψουμε την ακμή απο την incoming
-    //list του 5 και την outgoing list του 3
-    //αντίστοιχα ολες τις ouygoing edges αλλα λαι απο τις incoming edges του προορισμού
+    //We must delete all incoming edges and also remove them from
+    //the outgoing lists of their origin nodes.
+    //Example: if we delete node 3 and there is edge 5->3,
+    //we must remove that edge from 3's incoming list and 5's outgoing list.
+    //Likewise for all outgoing edges and destination incoming lists.
 
-    //!!Εδώ φαίνεται η αξία της generic υλοποίησης εμείς απλά καλούμε την list destroy και αυτη με τη σειρά της όταν πάει να διαγράψει κάθε κόμβο
-    ///άρα κάθε edge θα καλέσει την destroyEdge που κάνει ότι ακριβώς περιγράφεται παρακάτω!!
+    //This shows the value of generic implementation:
+    //we just call list destroy, and while deleting each node,
+    //each edge calls destroyEdge which does exactly what is described below.
 
     listDestroy(node->incomingEdges);
     listDestroy(node->outgoingEdges);
@@ -78,7 +81,7 @@ void destroyGraphListNode(Pointer nodeToDelete){
 }
 
 
-//όταν θ΄έλουμε να αφαιρέσουμε μία ακμή :
+//When we want to remove an edge:
 void destroyEdge(Pointer edgeToDelete){
     Edge edge = edgeToDelete;
     GraphNode nodeDestination = edge->nodeDestination;
@@ -86,9 +89,9 @@ void destroyEdge(Pointer edgeToDelete){
 
 
     if(nodeDestination->incomingEdges != NULL){
-        //΄θέτουμε το destroy value null για να μην προσπαθήσει η λίστα να 
-        //διαγράψει και το περιεχόμενο της ακμής αφου το κάνουμε εμείς σε αυτή την συνάρτηση
-        //θέλουμε απλά να αφαιρέσει το ListNode και να συνδέσει κατάληλα τους κόμβους
+        //Set destroy value to null so the list does not try to
+        //delete the edge payload as well, since we do it in this function.
+        //We only want it to remove the ListNode and reconnect nodes properly.
         listSetDestroyValue(nodeDestination->incomingEdges, NULL);
         listDeleteNode(nodeDestination->incomingEdges, edgeToDelete);
         listSetDestroyValue(nodeDestination->incomingEdges, destroyEdge);
@@ -109,11 +112,11 @@ void destroyEdge(Pointer edgeToDelete){
 
 
 
-//------------------------------------------------------Συναρτήσεις για τον γράφο---------------------------------------------------
+//------------------------------------------------------Graph functions---------------------------------------------------
 
 Graph graphCreate(){
     Graph graph = malloc(sizeof(*graph));
-    //δημιουργούμαι μία λίστα από κόμβους
+    //Create a list of nodes
     graph->nodes = listCreate(destroyGraphListNode, compareGraphNodes);
     graph->size = 0;
     return graph;
@@ -121,31 +124,31 @@ Graph graphCreate(){
 
 
 void graphAddNode(Graph graph, char* id, Map map){
-    //Δημιουργούμe ένας κόμβος
+    //Create a node
     GraphNode node = malloc(sizeof(*node));
     node->id = malloc(strlen(id) + 1);
     strcpy(node->id, id);
     node->visited = false;
-    //Δημιουργούμe tις λίστες από ακμές στις outgoing περνάμε null γιατι όταν διαγράφουμε μία ακμη
-    //η ακμή χρείάζεται μόνο μία φορά την συνάρτηση διαγραφής για να μην γίνει double free.Οπότε κάθε φορά που διαγράφουμε μία ακμή
-    //μέσω του Origin θα βρίσκουμε την List απο outgoing vetrtex του και θα την καλούμε να διαγράψει την ακμή
+    //Create edge lists. We use destroyEdge in both lists;
+    //edge deletion is controlled to avoid double free by temporarily
+    //disabling destroy where needed.
     node->incomingEdges = listCreate(destroyEdge, compareEdges);
     node->outgoingEdges = listCreate(destroyEdge, compareEdges);
 
-    //Προσθέτω τον κόμβο στην λίστα από κόμβους
+    //Insert node in the graph node list
     listInsert(graph->nodes, node);
-    //ενημέρωση και του hash table
-    mapInsert(map, node->id, node);//Στο map αποθηκευουμε GraphNode
+    //Also update hash table
+    mapInsert(map, node->id, node);//Store GraphNode in map
     graph->size++;
 
 }
 
 void addEdge(Graph graph, char* dateOfTransaction, int amount, char* id1, char* id2, Map map){
-    //Ψάχνω τον κόμβο με id1, μου επιστρέφει Graphnode*
+    //Find node with id1, returns GraphNode*
     GraphNode node1 = mapFind(map, id1);
     GraphNode node2 = mapFind(map, id2);
 
-    //Αν κάποιος κόμβος δεν υπάρχει τότε τον δημιουργώ
+    //If a node does not exist, create it
     if (node1 == NULL) {
         graphAddNode(graph, id1, map);
         node1 = mapFind(map, id1);
@@ -155,7 +158,7 @@ void addEdge(Graph graph, char* dateOfTransaction, int amount, char* id1, char* 
         graphAddNode(graph, id2, map);
         node2 = mapFind(map, id2);
     }
-    //Δημιουργώ έναν κόμβο με την ημερομηνία dateOfTransaction
+    //Create an edge with dateOfTransaction
     Edge edge = malloc(sizeof(*edge));
     edge->dateOfTransaction = malloc(strlen(dateOfTransaction) + 1);
     strcpy(edge->dateOfTransaction, dateOfTransaction);
@@ -164,15 +167,15 @@ void addEdge(Graph graph, char* dateOfTransaction, int amount, char* id1, char* 
     edge->nodeOrigin = node1;
     
     
-    //Προσθέτω τον κόμβο στην λίστα από outgoing Vertices του κόμβου node1
+    //Insert edge into outgoing list of node1
     listInsert(node1->outgoingEdges, edge);
-    //Προσθέτω τον κόμβο στην λίστα από incoming Vertices του κόμβου node2
+    //Insert edge into incoming list of node2
     listInsert(node2->incomingEdges, edge);
 }
 
 
 void removeGraphNode(char* id, Map map, Graph graph){
-    //δίνουμε εντολή στο hash να μην δείχνει πιά σε αυτον τον κόμβο γιατι δεν υπάρχει πιά
+    //Tell hash table to stop pointing to this node because it no longer exists
     GraphNode node = mapFind(map, id);
     if(node == NULL){
         return;
@@ -218,13 +221,13 @@ Edge findEdge(char* id1,char* id2, Map map){
 }
 
 bool modifyEdge(char* id1, char* id2, char* date, int amount,char* date2, int amount2, Map map){
-    //η find edge δεν μπορεί να μας βοηθήσει αυτή την στιγμή γιατί συγκρίνει βάση μόνο των Ids
+    //findEdge cannot help here because it compares only by ids
     GraphNode origin = mapFind(map, id1);
     GraphNode destination = mapFind(map, id2);
     if(origin == NULL || destination == NULL){
         return 1;
     }
-    //προσπέλαση μόνο του outgoing list του origin(ψάχνουμε μόνο ακμή από το id1->id2)
+    //Traverse only origin outgoing list (we search only for id1->id2 edge)
     for(ListNode node = listGetFirst(origin->outgoingEdges); node != NULL; node = listGetNext(node)){
         
         Edge edge = listNodeValue(node);
@@ -272,16 +275,16 @@ void displayIncomingEdges(char* id, Map map){
 
 void printToFile(Graph graph, FILE* file){
     ListNode listNode = listGetFirst(graph->nodes);
-    //Κάθε κόμβο του γράφου
+    //For each graph node
     while(listNode != NULL){
 
         GraphNode node = listNodeValue(listNode);
-        //Εκτυπώνουμε μόνο τις Outgoing ακμλες για να μην εκτυπ΄σουμε κάθε ακμή 2 φορές
+        //Print only outgoing edges so each edge is not printed twice
         if(listSize( node->outgoingEdges) == 0 && listSize(node->incomingEdges) == 0){
             fprintf(file, "%s (No transactions)\n", node->id);
         
         }
-        //κάθε εξερχόμενη ακμή(δεν χρειάζεται να ελένξουμε και τις εισερχόμενες , θα εκτυπώνονταν 2 φορές!)
+        //Each outgoing edge (no need to check incoming; would print twice)
         ListNode outgoingEdges = listGetFirst(node->outgoingEdges);
 
         while(outgoingEdges != NULL){
@@ -298,13 +301,13 @@ void printToFile(Graph graph, FILE* file){
 }
 
 void destroyGraph(Graph graph){
-    //όλη η δουλειά γίνεται στην destroyGraphListNode που περνάμε στην λίστα
+    //All cleanup is handled by destroyGraphListNode passed to list
     listDestroy(graph->nodes);
     free(graph);
 }
 
 
-//αν το flag είναι 0 θέλουμε να βρούμε απλούς κύκλους αλλιώς σημαίνει οτι κλήθηκε για κύκλους με ελάχιστο συνολικό ποσό
+//If flag is 0 we search for simple cycles, otherwise cycles with minimum total amount
 void findCircles(char* id, Graph graph, Map map, int minSum, bool flag) {
     GraphNode startNode = mapFind(map, id);
     if (startNode == NULL) {
@@ -330,32 +333,31 @@ void findCircles(char* id, Graph graph, Map map, int minSum, bool flag) {
 void dfsPrintingCircles(GraphNode node, GraphNode startNode, List list, int minSum) {
 
     node->visited = true;
-    //Αν δεν έχει καμία ακμή τότε δεν υπάρχει κύκλος
+    //If there is no edge, then no cycle exists
     if(node->outgoingEdges == NULL){
         return;
     }
     listInsert(list, node);
     bool foundCircle = false;   
-    //για κάθε εξερχόμενη ακμή
+    //For each outgoing edge
     for (ListNode outgoingEdges = listGetFirst(node->outgoingEdges);
         outgoingEdges != NULL; outgoingEdges = listGetNext(outgoingEdges)){
 
         Edge edge = listNodeValue(outgoingEdges);
-        //για τους κύκλους μεγαλύτερους από ένα συγκεκριμένο ποσό, αν η διαδρομή που ψάχνουμε κ
-        //έχει ακμή μικρότερη από αυτόν τον αριθμό , συνεχίζουμε με την επόμενη, σε περίπτωση που
-        // θέλουμε κύκλους ανεξαρτήτου ποσού(8) το minSum θα είναι -1 άρα δεν θα ισχύει ποτέ
+        //For cycles with minimum amount: if a path edge has amount smaller than min,
+        //skip it. For unrestricted cycles (8), minSum is -1 so this never applies.
         if(edge->amount < minSum){
             continue;
         }
         GraphNode child = edge->nodeDestination;
 
-        //Αν ο κόμβος είναι που ξεκινάμε είναι ίδιος με τον κόμβο που έχουμε φτάσει τότε έχει βρεθεί κύκλος
+        //If reached node is the start node, a cycle was found
         if (strcmp(child->id, startNode->id) == 0) {
             printf("   ");
             foundCircle = true;
             listInsert(list, child);
             ListNode circleNode = listGetFirst(list);
-    	    //Εκτύπωση του κύκλου
+    	    //Print cycle
             while (circleNode != NULL) {
                 GraphNode node1 = listNodeValue(circleNode);
                 printf("%s ", node1->id);
@@ -366,24 +368,24 @@ void dfsPrintingCircles(GraphNode node, GraphNode startNode, List list, int minS
             }
 
             printf("\n");
-            //αφαιρούμε τον κόμβο θέλουμε μόνο απλους κυκλους , ανσυνέχιζε θα εβρισκε και κύκλους της μορφής
+            //Remove node; we want only simple cycles, otherwise it would find cycles like
             //2->3->4->2->6->2
             listRemoveLast(list);
         } 
         
         else if (!child->visited) {
-            //Αν δεν έχει επισκεφτεί τον κόμβο τότε εμβαθύνουμε στο παιδί
+            //If child has not been visited, recurse into it
             dfsPrintingCircles(child, startNode, list, minSum);
         }
 
-        //Αν ο κόμβος είναι ο ίδιος με τον αρχικό KAI έχει βρεθεί κύκλος ,δηλαδή δεν είμαστε στον αρχικό κόμβο
-        // γιατι από εκεί ξεκινάμε αλλα γιατί έχουμε ξαναφτάσει, τότε σταματάμε(θέλουμε απλούς κυκλους)
+        //If current node is the start node and a cycle was found,
+        //then stop (we want simple cycles)
         if((strcmp(node->id, startNode->id) == 0 ) && foundCircle){
             break;
         }
     }
 
-    //για να μην επηρεάσει επόμενες αναζητήσεις
+    //Reset for future searches
     node->visited = false;
     listDeleteNode(list, node);
 }
@@ -406,25 +408,25 @@ void findPath(Graph graph, char* id1, char* id2, Map map){
 
 void dfsPath(GraphNode node, char* destination, List list, Map map, bool* found){
     node->visited = true;
-    //Αν δεν έχει καμία ακμή τότε δεν υπάρχει μονοπάτι
+    //If there is no edge, then no path exists
     if(node->outgoingEdges == NULL){
         return;
     }
     listInsert(list, node);  
-    //για κάθε εξερχόμενη ακμή
+    //For each outgoing edge
     for (ListNode outgoingEdges = listGetFirst(node->outgoingEdges);
         outgoingEdges != NULL; outgoingEdges = listGetNext(outgoingEdges)){
 
         Edge edge = listNodeValue(outgoingEdges);
         GraphNode child = edge->nodeDestination;
 
-        //Αν ο κόμβος είναι που ξεκινάμε είναι ίδιος με τον κόμβο destination τοτε βρήκαμε μονοπάτι
+        //If reached node is destination, we found a path
         if (strcmp(child->id, destination) == 0) {
             printf("   ");
             (*found) = true;
             listInsert(list, child);
             ListNode pathNode = listGetFirst(list);
-    	    //Εκτύπωση του μονοπατιού
+    	    //Print path
             while (pathNode != NULL) {
                 GraphNode node1 = listNodeValue(pathNode);
                 printf("%s ", node1->id);
@@ -439,7 +441,7 @@ void dfsPath(GraphNode node, char* destination, List list, Map map, bool* found)
         } 
         
         else if (!child->visited) {
-            //Αν δεν έχει επισκεφτεί τον κόμβο τότε εμβαθύνουμε στο παιδί
+            //If child has not been visited, recurse into it
             dfsPath(child, destination, list, map, found);
         }
 

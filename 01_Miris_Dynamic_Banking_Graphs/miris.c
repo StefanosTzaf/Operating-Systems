@@ -7,7 +7,7 @@ int main(int argc, char *argv[]){
 
   int option;
 
-  //Για να αποθηκεύσουμε το όνομα του αρχείου εισόδου και εξόδου από την γραμμή εντολών
+  //To store input and output file names from command line
   char* inputFile = NULL;
   char* outputFile = NULL;
 
@@ -35,8 +35,8 @@ int main(int argc, char *argv[]){
     return 1;
   }
 
-  char line[256];     //για το διαβασμα μίας γραμμής του αρχείου
-  int counter = 0;    //Ποσες γραμμες έχει το αρχείο για το μέγεθος του Hash table
+  char line[256];     //for reading one line from file
+  int counter = 0;    //how many lines file has, used for hash table size
   while (fgets(line, sizeof(line), file) != NULL) {
       counter++;
   }
@@ -44,10 +44,10 @@ int main(int argc, char *argv[]){
   Graph graph = graphCreate();
   Map map = mapCreate(compareMapNodes, destroyMapNodes, counter);
 
-  rewind(file);   //από την αρχή του αρχείου
-  //με την συνάρτηση strtok που ανααφέρθηκε στο φροντηστήριο διαβάζουμε τα δεδομένα από το αρχείο
-  //που χωρίζονται με κενά. Στην αρχή περνάμε ως ορισμα την γραμμή που θέλουμε να διαβάσουμε και μετά
-  //NULL (η συνάρτηση θα ασυνεχίσει στην γραμμή που την κάλεσε)
+  rewind(file);   //from start of file
+  //Using strtok (as discussed in tutorial) we read file data
+  //separated by spaces. First call passes the line,
+  //then NULL (function continues from previous position).
   while (fgets(line, sizeof(line), file) != NULL) {
     char* id1;
     char* id2;
@@ -55,7 +55,7 @@ int main(int argc, char *argv[]){
     char* date;
     id1 = strtok(line, " ");
     id2 = strtok(NULL, " ");
-    //μετατροπη σε integer
+    //convert to integer
     amount = atoi(strtok(NULL, " "));
     date = strtok(NULL, "\n");
     addEdge(graph, date, amount, id1, id2, map);
@@ -69,8 +69,8 @@ int main(int argc, char *argv[]){
   bool exit = false; 
   do{
     printf("Miris waiting for a command :\n");
-    //Διαβάζουμε με getcar γιατί δεν ξέρουμε πόσο μεγάλη θα είναι η είσοδος του χρήστη
-    //μπορει να γράψει πολλούς κομβους για insert πχ
+    //Read with getchar because we do not know user input length
+    //for example, user may type many nodes for insert
     char ch;
     char* command = NULL;
     int size = 0;
@@ -79,7 +79,7 @@ int main(int argc, char *argv[]){
     
     while(((ch = getchar()) != '\n') && (ch!= EOF)){
       if(size >= capacity - 1){
-        //διπλασιάζουμε το μέγεθος του buffer για να μην κάνουμε πολλά realloc
+        //double buffer size to avoid too many realloc calls
         capacity *= 2;
         command = realloc(command, capacity * sizeof(char));
       }
@@ -87,13 +87,13 @@ int main(int argc, char *argv[]){
     }
     command[size] = '\0';
     
-    //αν πατηθεί enter χωρίς να γραφτεί τίποτα
+    //if Enter is pressed with empty input
     if(strcmp(command, "") == 0){
       free(command);
       continue;
     }
 
-    //αντιγραφή της συμβολοσειράς γιατί θα χρειαστεί για 2η strtok βλ. insert
+    //copy string because a second strtok pass is needed, see insert
     char* commandCopy;
     commandCopy = malloc(strlen(command) + 1);
     strcpy(commandCopy, command);
@@ -105,7 +105,7 @@ int main(int argc, char *argv[]){
     if(strcmp(token, "i") == 0 || strcmp(token, "insert") == 0){
 
       token = strtok(NULL, " ");
-      //εάν το πρώτο όρισμα μετά το insert είναι NULL τότε έχουμε λάθος format
+      //if first argument after insert is NULL, format is invalid
       if(token == NULL){
         printf("   Format error:\n");
         printf("   Command Name : i Ni [Nj Nk ...] or insert Ni [Nj Nk ...]\n\n");
@@ -114,7 +114,7 @@ int main(int argc, char *argv[]){
         continue;
       }
 
-      //έλεγχος αν υπάρχει κάποιος κόμβος με αυτό το id
+      //check whether any node with this id already exists
       bool exists = false;
       while(token != NULL){
         if(mapFind(map, token) != NULL){
@@ -131,9 +131,8 @@ int main(int argc, char *argv[]){
         continue;
       }
 
-      //να ξεπεράσουμε το i της εντολής(χρησιμοποιούμε το αντίγραφο της εντολής 
-      //για να είμαστε σίγουροι οτι το περιεχόμενο της είναι ίδιο με την αρχική
-      //και να μπορέσουμε χωρίς λάθη να διασχίσουμε την συμβολοσειερά απο την αρχή)
+      //skip command token i (we use command copy to ensure content
+      //matches original command and traverse string from start safely)
 
       printf("   Insert into the graph structure 1 or more nodes\n   with specific STRING ids.\n\n");
       token = strtok(commandCopy, " ");
@@ -157,7 +156,7 @@ int main(int argc, char *argv[]){
       char* token2 = strtok(NULL, " ");
       char* sum = strtok(NULL, " ");
       char* date = strtok(NULL, " ");
-      //μετά την ημερομηνία δεν πρέπει να υπάρχει κάτι άλλο
+      //there should be nothing after date
       char* next = strtok(NULL, " ");
 
       if(token == NULL || token2 == NULL || sum == NULL || date == NULL || next != NULL){
@@ -177,7 +176,7 @@ int main(int argc, char *argv[]){
     //--------------------------------------------------------------- 3 --------------------------------------------------------
     else if(strcmp(token,"d") == 0 || strcmp(token, "delete") == 0){
       token = strtok(NULL, " ");
-      //εάν το πρώτο όρισμα μετά το insert είναι NULL τότε έχουμε λάθος format
+      //if first argument after delete is NULL, format is invalid
       if(token == NULL){
         printf("   Format error:\n");
         printf("   Command Name : d Ni [Nj Nk ...] or delete Ni [Nj Nk ...]\n\n");
@@ -187,7 +186,7 @@ int main(int argc, char *argv[]){
       }
       printf("   delete from graph listed nodes Ni, Nj, Nk, etc\n\n");
 
-      //έλεγχος αν υπάρχει κάποιος κόμβος με αυτό το id
+      //check whether every node id exists
       bool exists = false;
       while(token != NULL){
         if(mapFind(map, token) == NULL){
@@ -204,7 +203,7 @@ int main(int argc, char *argv[]){
         continue;
       }
 
-      //όμοια με insert
+      //same idea as insert
       token = strtok(commandCopy, " ");
       token = strtok(NULL, " ");
 
@@ -222,7 +221,7 @@ int main(int argc, char *argv[]){
 
       token = strtok(NULL, " ");
       char* token2 = strtok(NULL, " ");
-      //μετά το δεύτερο όρισμα δεν πρέπει να υπάρχει κάτι άλλο
+      //there should be nothing after second argument
       char* next = strtok(NULL, " ");
 
       if(next != NULL || token == NULL || token2 == NULL){
@@ -322,7 +321,7 @@ int main(int argc, char *argv[]){
 
       else{
         printf("   find all circles that contain node %s\n\n", token);
-        //Απλους κύκλους χωρίς ελάχιστο ποσό
+        //Simple cycles without minimum amount
         findCircles(token, graph, map, 0, 0);
         
       }

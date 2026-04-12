@@ -1,24 +1,24 @@
 #include "Map.h"
 #include "Graph.h"
 
-//Κόμβος του hash table
+//Hash table node
 struct map_node{
 	char* key; 
-	//δείκτης σε κ΄΄ομβο του γράφου μας GraphNode = struct graph_node*. 
-	//Έτσι και έχουμε πολύ γρήγορη πρόσβαση στον γράφο και διατηρούμε την ανεξαρτησία των δύο δομών όπως ζητείται
+	//Pointer to a graph node GraphNode = struct graph_node*.
+	//This gives fast graph access while preserving structure independence as required.
 	GraphNode value;    
 };
 
 struct map {
-	List* arrayOfBuckets;	    // Ο πίνακας των buckets του hash table(seperate chainening)
-	int capacity;				// Πόσο χώρο έχουμε δεσμεύσει εώς τώρα.
-	//συναρτήσεις που θα χρησιμοποιηθούν από την λίστα στα buckets
+	List* arrayOfBuckets;	    //Hash table bucket array (separate chaining)
+	int capacity;				//Currently allocated capacity
+	//Functions used by bucket lists
 	DestroyFunc destroyMapNodes;
 	CompareFunc compareMapNodes;
 };
 
 
-//η compare και η destroy για τις Lists απο MapNode
+//Compare and destroy for lists of MapNode
 Map mapCreate(CompareFunc compare, DestroyFunc destroy, int sizeByFile) {
 
 	Map map = malloc(sizeof(*map));
@@ -35,9 +35,9 @@ Map mapCreate(CompareFunc compare, DestroyFunc destroy, int sizeByFile) {
 
 
 void mapInsert(Map map, char* key, Pointer value) {
-	int pos = hashFunction(key) % map->capacity; // mod για να μην ξεπεράσουμε το μέγεθος του πίνακα
+	int pos = hashFunction(key) % map->capacity; //mod to stay within array bounds
 	
-	//αν είναι ο πρώτος κόμβος που hasharei σε αυτήν την θέση του πίνακα
+	//If this is the first node hashed into this array position
 	if(map->arrayOfBuckets[pos] == NULL){
 		map->arrayOfBuckets[pos] = listCreate(map->destroyMapNodes, map->compareMapNodes);
 	}
@@ -46,7 +46,7 @@ void mapInsert(Map map, char* key, Pointer value) {
 	node->value = value;
 	node->key = key;
 
-	//Η Λιστα έχει MapNode
+	//The list stores MapNode
 	listInsert((map->arrayOfBuckets[pos]), node);
 }
 
@@ -71,14 +71,14 @@ Pointer mapFind(Map map, char* key) {
 	}
 }
 
-//επιστρέφει τον κόμβο που αντιστοιχεί στο key , καλείται από την mapFind
+//Returns the node that corresponds to key, called by mapFind
 MapNode mapFindNode(Map map, char* key) {
 	int pos = hashFunction(key) % map->capacity;
 	
 	if( map->arrayOfBuckets[pos] == NULL){
 		return NULL;
 	}
-	//Η δουλεία της find θα γίνει ουσιαστικά από την compare που παραθέτουμε κάθε φορά στην λίστα
+	//find logic is essentially handled by compare passed to list
 	ListNode node = listFind(map->arrayOfBuckets[pos], key);
 	if(node == NULL){
 		return NULL;
@@ -88,7 +88,7 @@ MapNode mapFindNode(Map map, char* key) {
 	}
 }
 
-//κάνουμε μόνο τους δείκτες NULL γιατί η destroyGraph έχει αποδεσμέυσει την μνήμη των κόμβων
+//We only clear pointers because destroyGraph already freed node memory
 void mapDestroy(Map map) {
 	for (int i = 0; i < map->capacity; i++) {
 		if(map->arrayOfBuckets[i] != NULL){
@@ -108,7 +108,7 @@ Pointer mapNodeValue(MapNode node) {
 	return node->value;
 }
 
-// djb2 hash function για strings (όπως αναφέρθηκε στο piazza επιτρέπεται να χρησιμοποιηθεί έτοιμη συνάρτηση)
+//djb2 hash function for strings (as mentioned on Piazza, using a ready function is allowed)
 unsigned int hashFunction(char* value) {
     unsigned int  hash = 5381;
     for (char* s = value; *s != '\0'; s++)
