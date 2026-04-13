@@ -3,21 +3,22 @@ CC = gcc
 CFLAGS = -Wall -I ./include
 LDFLAGS = -lrt -pthread -lm
 
+BUILD_DIR = build
+SRC_DIR = src
 
-INITIALIZER_OBJS = src/initializer.o src/utils.o
+INITIALIZER_OBJS = $(BUILD_DIR)/initializer.o $(BUILD_DIR)/utils.o
 INITIALIZER_EXEC = initializer
 
-VISITOR_OBJS = src/visitor.o src/utils.o
+VISITOR_OBJS = $(BUILD_DIR)/visitor.o $(BUILD_DIR)/utils.o
 VISITOR_EXEC = visitor
 
-RECEPTION_OBJS = src/receptionist.o src/utils.o
+RECEPTION_OBJS = $(BUILD_DIR)/receptionist.o $(BUILD_DIR)/utils.o
 RECEPTION_EXEC = receptionist
 
-
-MONITOR_OBJS = src/monitor.o src/utils.o
+MONITOR_OBJS = $(BUILD_DIR)/monitor.o $(BUILD_DIR)/utils.o
 MONITOR_EXEC = monitor
 
-CLOSER_OBJS = src/closer.o src/utils.o
+CLOSER_OBJS = $(BUILD_DIR)/closer.o $(BUILD_DIR)/utils.o
 CLOSER_EXEC = closer
 
 all: $(INITIALIZER_EXEC) $(VISITOR_EXEC) $(RECEPTION_EXEC) $(MONITOR_EXEC) $(CLOSER_EXEC)
@@ -37,5 +38,13 @@ $(MONITOR_EXEC): $(MONITOR_OBJS)
 $(CLOSER_EXEC): $(CLOSER_OBJS)
 	$(CC) $(CLOSER_OBJS) -o $(CLOSER_EXEC) $(CFLAGS) $(LDFLAGS)
 
+$(BUILD_DIR)/%.o: $(SRC_DIR)/%.c | $(BUILD_DIR)
+	$(CC) $(CFLAGS) -c $< -o $@
+
+$(BUILD_DIR):
+	mkdir -p $(BUILD_DIR)
+	
 clean:
-	rm -f $(INITIALIZER_OBJS) $(INITIALIZER_EXEC) $(VISITOR_OBJS) $(VISITOR_EXEC) $(RECEPTION_OBJS) $(RECEPTION_EXEC) $(MONITOR_OBJS) $(MONITOR_EXEC) $(CLOSER_OBJS) $(CLOSER_EXEC)
+	rm -rf $(BUILD_DIR) $(INITIALIZER_EXEC) $(VISITOR_EXEC) $(RECEPTION_EXEC) $(MONITOR_EXEC) $(CLOSER_EXEC)
+
+.PHONY: all clean
