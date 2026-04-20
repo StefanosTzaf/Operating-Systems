@@ -3,7 +3,7 @@
 This repository contains three distinct projects exploring the internals of the Linux Operating System. The implementations focus heavily on low-level **C programming**, strict **dynamic memory management**, **Inter-Process Communication (IPC)**, and **concurrency control** using the POSIX API.
 They where developed as part of the **"Operating Systems"** course at the Department of Informatics and Telecommunications, National and Kapodistrian University of Athens (NKUA).
 Link: https://www.alexdelis.eu/k22/
----
+
 
 ## 🗂️ Projects Overview
 
